@@ -1,0 +1,10 @@
+streamlit
+pandas
+numpy
+plotly
+shapely
+openpyxl
+lxml
+folium
+streamlit-folium
+python-dateutil
