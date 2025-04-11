@@ -6,7 +6,7 @@ from streamlit_folium import st_folium
 
 st.set_page_config(page_title="Интерактивная карта", layout="wide")
 st.title("🗺️ Интерактивная карта по зонам и дням")
-
+tab1, tab2 = st.tabs(["📍 Карта", "📈 Динамика"])
 @st.cache_data
 def load_data():
     df = pd.read_excel("data/Сводка_с_зонами.xlsx")
