@@ -5,7 +5,8 @@ from folium.plugins import MarkerCluster
 from streamlit_folium import st_folium
 
 st.set_page_config(page_title="Интерактивная карта", layout="wide")
-st.title("🗺️ Интерактивная карта по зонам и дням")
+st.title("🗺️ Интерактивная карта по зонам, дням и месяцам")
+
 @st.cache_data
 def load_data():
     df = pd.read_excel("data/Сводка_с_зонами.xlsx")
@@ -15,7 +16,7 @@ def load_data():
 df = load_data()
 
 # --- ФИЛЬТРЫ ---
-col1, col2, col3 = st.columns([3, 3, 2])
+col1, col2, col3, col4 = st.columns([3, 3, 2, 2])
 
 with col1:
     all_days = ["Все дни"] + sorted(df["День недели"].unique())
@@ -26,6 +27,10 @@ with col2:
     selected_zone = st.selectbox("📍 Зона:", all_zones)
 
 with col3:
+    all_months = ["Все месяцы"] + sorted(df["Месяц"].unique())
+    selected_month = st.selectbox("📆 Месяц:", all_months)
+
+with col4:
     use_clusters = st.toggle("🧲 Кластеризация", value=True)
 
 # --- ФИЛЬТРАЦИЯ ---
@@ -37,6 +42,8 @@ if selected_day != "Все дни":
 if selected_zone != "Все зоны":
     filtered_df = filtered_df[filtered_df["Зона"] == selected_zone]
 
+if selected_month != "Все месяцы":
+    filtered_df = filtered_df[filtered_df["Месяц"] == selected_month]
 
 # --- КАРТА ---
 if filtered_df.empty:
@@ -70,6 +77,16 @@ else:
         ).add_to(marker_group)
 
     st_folium(m, width=1000, height=600)
+
+    # --- ИТОГИ ---
+    st.markdown("---")
+    st.subheader("📊 Итоги по фильтру:")
+
+    total_docs = len(filtered_df)
+    total_sum = filtered_df["Сумма с НДС"].sum()
+
+    st.info(f"**Всего документов:** {total_docs}  
+**Сумма с НДС:** {total_sum:,.2f} ₽")
 
     # --- ТАБЛИЦА ---
     st.subheader("📋 Отфильтрованные данные")
