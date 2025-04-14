@@ -18,16 +18,25 @@ df = load_data()
 col1, col2, col3 = st.columns([3, 3, 2])
 
 with col1:
-    selected_day = st.selectbox("📅 День недели:", sorted(df["День недели"].unique()))
+    all_days = ["Все дни"] + sorted(df["День недели"].unique())
+    selected_day = st.selectbox("📅 День недели:", all_days)
 
 with col2:
-    selected_zone = st.selectbox("📍 Зона:", sorted(df["Зона"].unique()))
+    all_zones = ["Все зоны"] + sorted(df["Зона"].unique())
+    selected_zone = st.selectbox("📍 Зона:", all_zones)
 
 with col3:
     use_clusters = st.toggle("🧲 Кластеризация", value=True)
 
 # --- ФИЛЬТРАЦИЯ ---
-filtered_df = df[(df["День недели"] == selected_day) & (df["Зона"] == selected_zone)]
+filtered_df = df.copy()
+
+if selected_day != "Все дни":
+    filtered_df = filtered_df[filtered_df["День недели"] == selected_day]
+
+if selected_zone != "Все зоны":
+    filtered_df = filtered_df[filtered_df["Зона"] == selected_zone]
+
 
 # --- КАРТА ---
 if filtered_df.empty:
