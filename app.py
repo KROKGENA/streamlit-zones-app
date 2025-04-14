@@ -85,7 +85,13 @@ else:
     total_docs = len(filtered_df)
     total_sum = filtered_df["Сумма с НДС"].sum()
 
-    st.info(f"**Всего документов:** {total_docs}  
+    st.info(
+    f"""
+    **Всего документов:** {total_docs}  
+    **Сумма с НДС:** {total_sum:,.2f} ₽
+    """
+)
+  
 **Сумма с НДС:** {total_sum:,.2f} ₽")
 
     # --- ТАБЛИЦА ---
