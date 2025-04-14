@@ -32,6 +32,29 @@ with col3:
 
 with col4:
     use_clusters = st.toggle("🧲 Кластеризация", value=True)
+    # --- ССЫЛКА НА КАРТУ МАРШРУТОВ ---
+st.markdown("---")
+st.subheader("🛣️ Карта маршрутов")
+
+st.markdown(
+    """
+    <a href="https://krokgena.github.io/streamlit-zones-app/routes.html" target="_blank">
+        <button style="
+            background-color:#4CAF50;
+            color:white;
+            padding:10px 20px;
+            border:none;
+            border-radius:8px;
+            font-size:16px;
+            cursor:pointer;
+        ">
+        🚗 Открыть карту маршрутов
+        </button>
+    </a>
+    """,
+    unsafe_allow_html=True
+)
+
 
 # --- ФИЛЬТРАЦИЯ ---
 filtered_df = df.copy()
