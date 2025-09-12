@@ -2,7 +2,7 @@
 import json
 import pandas as pd
 import streamlit as st
-from datetime import datetime
+from collections import defaultdict
 from streamlit.components.v1 import html as st_html
 
 st.set_page_config(page_title="Интерактивная карта (Яндекс)", layout="wide")
@@ -36,25 +36,6 @@ with col4:
     use_clusters = st.toggle("🧲 Кластеризация", value=True)
 
 st.markdown("---")
-st.subheader("🛣️ Карта маршрутов")
-st.markdown(
-    """
-    <a href="https://krokgena.github.io/streamlit-zones-app/routes.html" target="_blank">
-        <button style="
-            background-color:#4CAF50;
-            color:white;
-            padding:10px 20px;
-            border:none;
-            border-radius:8px;
-            font-size:16px;
-            cursor:pointer;
-        ">
-        🚗 Открыть карту маршрутов
-        </button>
-    </a>
-    """,
-    unsafe_allow_html=True
-)
 
 # --- ФИЛЬТРАЦИЯ ---
 filtered_df = df.copy()
@@ -72,22 +53,69 @@ else:
     center_lat = float(filtered_df["lat"].mean())
     center_lon = float(filtered_df["lon"].mean())
 
+    # 1) Группируем ВСЕ записи по точным координатам → один маркер на координату
+    groups = defaultdict(list)
+    for _, r in filtered_df.iterrows():
+        key = (float(r["lat"]), float(r["lon"]))
+        groups[key].append(r)
+
+    # 2) Готовим placemark’и: hint — кратко; balloon — список визитов
     points = []
-    for _, row in filtered_df.iterrows():
-        tooltip = f"🧾 {row['Холдинг, контрагент']}<br>📅 {row['Месяц']} | {row['День недели']}"
-        popup = f"""
-        <b>Документ:</b> {row['Номер документа']}<br>
-        <b>Дата:</b> {pd.to_datetime(row['Дата документа']).date()}<br>
-        <b>Сумма с НДС:</b> {float(row['Сумма с НДС']):,.2f} ₽<br>
-        <b>Группа:</b> {row['группа']}<br>
-        <b>Холдинг:</b> {row['Холдинг, контрагент']}<br>
-        <b>Зона:</b> {row['Зона']}
-        """
+    for (lat, lon), rows in groups.items():
+        # Сортируем по дате убыв.
+        rows = sorted(rows, key=lambda x: pd.to_datetime(x["Дата документа"]), reverse=True)
+
+        if len(rows) == 1:
+            r = rows[0]
+            hint = f"🧾 {r['Холдинг, контрагент']}<br>📅 {r['Месяц']} | {r['День недели']}"
+            balloon = f"""
+                <b>Документ:</b> {r['Номер документа']}<br>
+                <b>Дата:</b> {pd.to_datetime(r['Дата документа']).date()}<br>
+                <b>Сумма с НДС:</b> {float(r['Сумма с НДС']):,.2f} ₽<br>
+                <b>Группа:</b> {r['группа']}<br>
+                <b>Холдинг:</b> {r['Холдинг, контрагент']}<br>
+                <b>Зона:</b> {r['Зона']}
+            """
+        else:
+            # Множественные визиты — делаем аккуратную таблицу в балуне
+            hint = f"📍 Повторные визиты: {len(rows)}"
+            rows_html = []
+            for r in rows:
+                rows_html.append(f"""
+                    <tr>
+                      <td>{pd.to_datetime(r['Дата документа']).date()}</td>
+                      <td>{r['Номер документа']}</td>
+                      <td style="text-align:right">{float(r['Сумма с НДС']):,.2f} ₽</td>
+                      <td>{r['группа']}</td>
+                      <td>{r['Холдинг, контрагент']}</td>
+                      <td>{r['Зона']}</td>
+                    </tr>
+                """)
+            table = f"""
+                <div style="font-weight:600;margin-bottom:6px">Визиты в эту точку: {len(rows)}</div>
+                <div style="max-height:260px;overflow:auto;border:1px solid #eee;border-radius:8px">
+                <table style="border-collapse:collapse;width:100%;font-size:13px">
+                  <thead>
+                    <tr style="background:#f7f7f7">
+                      <th style="text-align:left;padding:6px 8px">Дата</th>
+                      <th style="text-align:left;padding:6px 8px">Документ</th>
+                      <th style="text-align:right;padding:6px 8px">Сумма</th>
+                      <th style="text-align:left;padding:6px 8px">Группа</th>
+                      <th style="text-align:left;padding:6px 8px">Холдинг</th>
+                      <th style="text-align:left;padding:6px 8px">Зона</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {''.join(rows_html)}
+                  </tbody>
+                </table>
+                </div>
+            """
+            balloon = table
+
         points.append({
-            "lat": float(row["lat"]),
-            "lon": float(row["lon"]),
-            "hint": tooltip,
-            "balloon": popup
+            "lat": lat, "lon": lon,
+            "hint": hint, "balloon": balloon
         })
 
     st_html(f"""
@@ -122,11 +150,13 @@ else:
     ));
 
     if (USE_CLUSTERS) {{
+      // Кластеризуем уже агрегированные точки
       const clusterer = new ymaps.Clusterer({{
         preset: 'islands#invertedBlueClusterIcons',
-        groupByCoordinates: false,
+        groupByCoordinates: false,            // уже сгруппировали сами
         clusterDisableClickZoom: false,
-        clusterOpenBalloonOnClick: true
+        clusterOpenBalloonOnClick: true,
+        clusterBalloonContentLayout: 'cluster#balloonCarousel'
       }});
       clusterer.add(geoObjects);
       map.geoObjects.add(clusterer);
